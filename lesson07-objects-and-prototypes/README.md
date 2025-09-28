@@ -1,150 +1,827 @@
-# Lesson 07 · Objects and Prototypes
+# Lesson 07 · Objects and Prototypes 🏗️
 
-Today I’ll show you how JavaScript’s object system really works. We’ll crack open the prototype chain and explore the two primary patterns for creating reusable object blueprints: the modern `class` syntax and the classic factory function.
+> "If JavaScript objects are like LEGO blocks, prototypes are the instruction manual that tells you how to build them."
 
-## Objectives
-- Understand how the prototype chain enables inheritance.
-- Create objects using constructor functions and the modern `class` syntax.
-- Use getters, setters, static methods, and private fields in classes.
-- Check an object's type with the `instanceof` operator.
-- Manage `this` explicitly with `.bind`, `.call`, and `.apply`.
-- Understand and use the factory function pattern as an alternative to classes.
+Welcome to JavaScript's secret sauce! Today we're diving into how JavaScript creates and shares behaviors between objects. Think of it like learning how recipes inherit from family cookbooks—grandma's cookie recipe becomes the foundation for mom's chocolate chip cookies, which becomes your own special version with extra chocolate!
 
-## Why This Matters
-Object-oriented patterns are everywhere in the JavaScript ecosystem. Mastering prototypes and classes gives you a mental model for reading any codebase, while understanding alternatives like factory functions allows you to choose the right tool for the job.
+## 🎯 What You'll Learn
 
-## Lesson Narrative
+### Core Concepts
+- **The Prototype Chain** - How objects inherit from other objects (like family traits!)
+- **Classes** - The modern way to create object blueprints (like cookie cutters)
+- **Constructor Functions** - The old-school way (still important to know!)
+- **Factory Functions** - An alternative pattern that's often simpler
+- **The `this` keyword mastery** - Finally understand what `this` actually means!
 
-### 1. The Prototype Chain
-Every object in JavaScript has an internal link (`[[Prototype]]`) to another object. When you try to access a property, JavaScript walks up this chain until it finds the property or reaches the end (`null`).
+### Practical Skills
+- Build reusable object templates for your apps
+- Create private data that can't be accessed from outside
+- Use getters/setters to control how data is accessed
+- Choose between classes and factories (and know why!)
+- Debug prototype-related issues like a pro
+
+## 🌟 Why This Matters
+
+**Real-World Applications:**
+- 🎮 **Game Development**: Player characters inheriting from a base character class
+- 🛒 **E-commerce**: Product types sharing common properties
+- 👥 **User Systems**: Different user roles (admin, customer) with shared behaviors
+- 📱 **React Components**: Understanding class components (though hooks are now preferred)
+- 🔧 **Node.js**: Most built-in modules use prototypes extensively
+
+**Career Impact:**
+- Every JavaScript framework uses these patterns
+- Required knowledge for technical interviews
+- Essential for reading and understanding existing codebases
+- Foundation for TypeScript classes
+
+## 📚 Deep Dive Into Concepts
+
+### 1. The Prototype Chain: JavaScript's Inheritance System 🔗
+
+**Analogy:** Imagine you're at a library. You ask for a book. If your local branch doesn't have it, they check the main library. If the main library doesn't have it, they check the national archive. That's the prototype chain!
+
+**How It Works:**
+1. You try to access a property on an object
+2. JavaScript looks for it on the object itself
+3. If not found, it looks at the object's prototype
+4. Keeps looking up the chain until found or reaches `null`
 
 ```javascript
-// prototype.js
-const basePermissions = { canView: true };
+// prototype-chain-demo.js
 
-// Create a user object whose prototype is basePermissions
-const user = Object.create(basePermissions);
-user.name = "Alice";
-
-console.log(user.name); // "Alice" (own property)
-console.log(user.canView); // true (from the prototype)
-console.log(Object.getPrototypeOf(user) === basePermissions); // true
-```
-
-### 2. The Old Way: Constructor Functions
-Before `class`, developers used functions and the `new` keyword to simulate classes.
-
-```javascript
-// constructor.js
-function Course(title) {
-  this.title = title;
-}
-
-Course.prototype.describe = function () {
-  return `Course: ${this.title}`;
+// Think of this as the "grandparent" object
+const vehicle = {
+    hasWheels: true,
+    move() {
+        console.log("Moving...");
+    }
 };
 
-const jsCourse = new Course("Mastering JavaScript");
-console.log(jsCourse.describe()); // "Course: Mastering JavaScript"
-```
-The `new` keyword is doing four things: 1. Creates a new empty object. 2. Sets that object's prototype to `Course.prototype`. 3. Calls `Course` with `this` bound to the new object. 4. Returns the new object.
+// Think of this as the "parent" object
+const car = Object.create(vehicle);  // car's prototype is vehicle
+car.doors = 4;
+car.honk = function() {
+    console.log("Beep beep!");
+};
 
-### 3. The Modern Way: `class` Syntax (ES6+)
-`class` is syntactic sugar over the prototype system, providing a much cleaner and more powerful syntax.
+// Think of this as the "child" object
+const myCar = Object.create(car);  // myCar's prototype is car
+myCar.brand = "Tesla";
+myCar.model = "Model 3";
+
+// Let's trace the prototype chain!
+console.log(myCar.brand);      // "Tesla" (own property)
+console.log(myCar.doors);      // 4 (from car prototype)
+console.log(myCar.hasWheels);  // true (from vehicle prototype)
+myCar.move();                   // "Moving..." (from vehicle prototype)
+
+// Visualize the chain
+console.log("\nPrototype Chain:");
+console.log("myCar -> car -> vehicle -> Object.prototype -> null");
+
+// You can check the prototype
+console.log(Object.getPrototypeOf(myCar) === car);        // true
+console.log(Object.getPrototypeOf(car) === vehicle);      // true
+console.log(Object.getPrototypeOf(vehicle) === Object.prototype); // true
+```
+
+**💡 Key Insight:** Every object in JavaScript (except `Object.prototype`) has a prototype. This is how methods like `.toString()` work on any object—they're defined on `Object.prototype`!
+
+### 2. Constructor Functions: The Classic Pattern 🏗️
+
+**Analogy:** A constructor function is like a factory assembly line. The `new` keyword starts the conveyor belt, and each step adds parts to build your object.
+
+Before ES6 classes, this was THE way to create object blueprints:
 
 ```javascript
-// class.js
-class Person {
-  // Private field (ES2022) - truly private
-  #birthYear;
+// constructor-functions-explained.js
 
-  constructor(firstName, lastName, birthYear) {
+// Constructor function (note the capital letter convention!)
+function Person(firstName, lastName, age) {
+    // The 'new' keyword creates 'this' as an empty object
     this.firstName = firstName;
     this.lastName = lastName;
-    this.#birthYear = birthYear;
-  }
-
-  // Getter
-  get fullName() {
-    return `${this.firstName} ${this.lastName}`;
-  }
-
-  // Setter
-  set fullName(name) {
-    [this.firstName, this.lastName] = name.split(' ');
-  }
-
-  // Instance Method
-  getAge() {
-    return new Date().getFullYear() - this.#birthYear;
-  }
-
-  // Static Method - belongs to the class, not the instance
-  static from(personObject) {
-    return new Person(personObject.firstName, personObject.lastName, personObject.birthYear);
-  }
+    this.age = age;
+    this.friendsList = [];  // Each person gets their own friends array
 }
 
-const alice = new Person("Alice", "Green", 1990);
-console.log(alice.fullName); // "Alice Green"
-console.log(alice.getAge()); // (current year - 1990)
-// console.log(alice.#birthYear); // SyntaxError: Private field must be declared in an enclosing class
+// Methods go on the prototype (shared by all instances)
+Person.prototype.introduce = function() {
+    return `Hi, I'm ${this.firstName} ${this.lastName}`;
+};
 
-const bob = Person.from({ firstName: "Bob", lastName: "Ross", birthYear: 1942 });
-console.log(bob.fullName); // "Bob Ross"
+Person.prototype.haveBirthday = function() {
+    this.age++;
+    console.log(`🎂 Happy birthday! Now ${this.age} years old.`);
+};
+
+Person.prototype.addFriend = function(friendName) {
+    this.friendsList.push(friendName);
+    console.log(`${this.firstName} is now friends with ${friendName}`);
+};
+
+// Creating instances
+const alice = new Person("Alice", "Johnson", 25);
+const bob = new Person("Bob", "Smith", 30);
+
+// Each instance has its own properties
+console.log(alice.introduce());  // "Hi, I'm Alice Johnson"
+console.log(bob.introduce());    // "Hi, I'm Bob Smith"
+
+// But they share the same methods (memory efficient!)
+console.log(alice.introduce === bob.introduce);  // true
+
+// Modifying instance data
+alice.haveBirthday();  // Now 26
+alice.addFriend("Charlie");
+bob.addFriend("Diana");
+
+console.log(alice.friendsList);  // ["Charlie"]
+console.log(bob.friendsList);    // ["Diana"] - separate arrays!
 ```
 
-### 4. Checking Type: `instanceof`
-The `instanceof` operator checks if an object appears anywhere in the prototype chain of a constructor.
-
+**🎯 What `new` Actually Does:**
 ```javascript
-console.log(alice instanceof Person); // true
-console.log(alice instanceof Object); // true (all objects inherit from Object)
+// Behind the scenes, 'new' does this:
+function whatNewDoes(Constructor, ...args) {
+    // Step 1: Create empty object
+    const obj = {};
+    
+    // Step 2: Set prototype
+    Object.setPrototypeOf(obj, Constructor.prototype);
+    
+    // Step 3: Call constructor with 'this' = obj
+    Constructor.apply(obj, args);
+    
+    // Step 4: Return the object
+    return obj;
+}
 ```
 
-### 5. Explicitly Setting `this`
-Sometimes you need to tell a function what its `this` context should be.
+**⚠️ Common Mistake:**
+```javascript
+// WRONG: Forgetting 'new'
+const wrongPerson = Person("Wrong", "Way", 20);
+console.log(wrongPerson);  // undefined
+console.log(window.firstName);  // "Wrong" - Oops! Added to global!
 
-- `.call(thisContext, arg1, arg2)`: Calls the function immediately with a specific `this`.
-- `.apply(thisContext, [arg1, arg2])`: Same as `call`, but arguments are in an array.
-- `.bind(thisContext)`: Returns a *new* function that is permanently bound to the given `this`.
+// RIGHT: Always use 'new' with constructor functions
+const rightPerson = new Person("Right", "Way", 20);
+```
+
+### 3. Modern Classes: The Clean, Powerful Way 🎨
+
+**Analogy:** If constructor functions are like building furniture from scratch, classes are like IKEA—same result, but with clearer instructions and better organization!
 
 ```javascript
-// bind-call-apply.js
-function introduce(greeting) {
-  console.log(`${greeting}, I am ${this.name}.`);
+// modern-classes-complete.js
+
+class BankAccount {
+    // Private fields (truly private, not just convention!)
+    #balance = 0;
+    #pin;
+    #transactionHistory = [];
+    
+    // Static property (shared by all instances)
+    static totalAccounts = 0;
+    static MINIMUM_BALANCE = 10;
+    
+    constructor(owner, initialDeposit = 0, pin) {
+        this.owner = owner;
+        this.accountNumber = BankAccount.generateAccountNumber();
+        this.#pin = pin;
+        
+        if (initialDeposit > 0) {
+            this.deposit(initialDeposit);
+        }
+        
+        BankAccount.totalAccounts++;
+    }
+    
+    // Getter - accessed like a property, computed on-the-fly
+    get balance() {
+        return `$${this.#balance.toFixed(2)}`;
+    }
+    
+    // Getter for transaction count
+    get transactionCount() {
+        return this.#transactionHistory.length;
+    }
+    
+    // Setter - control how values are set
+    set pin(newPin) {
+        if (String(newPin).length !== 4) {
+            throw new Error("PIN must be 4 digits");
+        }
+        this.#pin = newPin;
+        console.log("PIN updated successfully");
+    }
+    
+    // Public methods
+    deposit(amount) {
+        if (amount <= 0) {
+            throw new Error("Deposit must be positive");
+        }
+        this.#balance += amount;
+        this.#recordTransaction('deposit', amount);
+        return this.balance;
+    }
+    
+    withdraw(amount, pin) {
+        if (!this.#verifyPin(pin)) {
+            throw new Error("Invalid PIN");
+        }
+        if (amount > this.#balance) {
+            throw new Error("Insufficient funds");
+        }
+        if (this.#balance - amount < BankAccount.MINIMUM_BALANCE) {
+            throw new Error(`Balance cannot go below $${BankAccount.MINIMUM_BALANCE}`);
+        }
+        
+        this.#balance -= amount;
+        this.#recordTransaction('withdrawal', amount);
+        return this.balance;
+    }
+    
+    // Private methods (can only be called inside the class)
+    #verifyPin(pin) {
+        return this.#pin === pin;
+    }
+    
+    #recordTransaction(type, amount) {
+        this.#transactionHistory.push({
+            type,
+            amount,
+            timestamp: new Date(),
+            balanceAfter: this.#balance
+        });
+    }
+    
+    // Public method that uses private data
+    getStatement() {
+        console.log(`\n=== Account Statement ===");
+        console.log(`Account: ${this.accountNumber}`);
+        console.log(`Owner: ${this.owner}`);
+        console.log(`Current Balance: ${this.balance}`);
+        console.log(`\nRecent Transactions:`);
+        
+        this.#transactionHistory.slice(-5).forEach(trans => {
+            const sign = trans.type === 'deposit' ? '+' : '-';
+            console.log(`  ${sign}$${trans.amount} on ${trans.timestamp.toLocaleDateString()}`);
+        });
+    }
+    
+    // Static method (called on class, not instance)
+    static generateAccountNumber() {
+        return 'ACC' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    }
+    
+    // Static method to create account from existing data
+    static fromJSON(jsonString) {
+        const data = JSON.parse(jsonString);
+        return new BankAccount(data.owner, data.initialDeposit, data.pin);
+    }
 }
 
-const person = { name: "Zelda" };
+// Using the class
+const myAccount = new BankAccount("Alice Johnson", 1000, "1234");
 
-introduce.call(person, "Greetings"); // "Greetings, I am Zelda."
-introduce.apply(person, ["Hi there"]); // "Hi there, I am Zelda."
+console.log(myAccount.balance);           // "$1000.00" (getter)
+console.log(myAccount.owner);             // "Alice Johnson"
+// console.log(myAccount.#balance);       // Error! Private field
 
-const introduceZelda = introduce.bind(person);
-introduceZelda("Good morning"); // "Good morning, I am Zelda."
-```
+myAccount.deposit(500);
+console.log(myAccount.balance);           // "$1500.00"
 
-### 6. Alternative: Factory Functions
-A factory function is any function that is not a class or constructor but returns a new object. They don't use `new` or `this`, and rely on closures for privacy.
-
-```javascript
-// factory.js
-function createLogger(prefix) {
-  // The 'prefix' variable is kept private by the closure
-  return {
-    info: (message) => console.log(`[${prefix}] INFO: ${message}`),
-    warn: (message) => console.log(`[${prefix}] WARN: ${message}`),
-  };
+try {
+    myAccount.withdraw(200, "0000");      // Wrong PIN
+} catch (error) {
+    console.log("Error:", error.message); // "Invalid PIN"
 }
 
-const appLogger = createLogger("App");
-appLogger.info("Application has started.");
+myAccount.withdraw(200, "1234");          // Success!
+myAccount.getStatement();
 
-const dbLogger = createLogger("Database");
-dbLogger.warn("Connection unstable.");
+// Using static methods
+console.log(`Total accounts created: ${BankAccount.totalAccounts}`);
+
+const jsonData = '{"owner":"Bob Smith","initialDeposit":500,"pin":"5678"}';
+const bobAccount = BankAccount.fromJSON(jsonData);
 ```
-**Pros:** Simpler, no `this` confusion, natural encapsulation.
-**Cons:** Can be less performant if creating many instances, no standard way to check type (`instanceof`).
+
+**🎯 Class Features Explained:**
+
+| Feature | What It Does | When to Use |
+|---------|--------------|-------------|
+| `constructor()` | Initializes new instances | Always needed for setup |
+| `#privateField` | Data that can't be accessed outside | Sensitive data, internal state |
+| `get propertyName()` | Computed property, accessed like regular property | Derived values, formatted output |
+| `set propertyName(value)` | Controls how property is set | Validation, side effects |
+| `static method()` | Method on class itself, not instances | Utility functions, factories |
+| `static property` | Shared data across all instances | Constants, counters |
+
+### 4. Inheritance: Building on What Exists 🏰
+
+**Analogy:** Inheritance is like evolving Pokémon—Pikachu (base) evolves into Raichu (extended) with all original abilities plus new ones!
+
+```javascript
+// inheritance-example.js
+
+// Base class (parent)
+class Vehicle {
+    constructor(brand, model, year) {
+        this.brand = brand;
+        this.model = model;
+        this.year = year;
+        this.isRunning = false;
+    }
+    
+    start() {
+        this.isRunning = true;
+        return `${this.brand} ${this.model} started!`;
+    }
+    
+    stop() {
+        this.isRunning = false;
+        return `${this.brand} ${this.model} stopped.`;
+    }
+    
+    getAge() {
+        return new Date().getFullYear() - this.year;
+    }
+}
+
+// Extended class (child)
+class ElectricVehicle extends Vehicle {
+    #batteryCapacity;
+    #currentCharge;
+    
+    constructor(brand, model, year, batteryCapacity) {
+        // MUST call super() first in constructor!
+        super(brand, model, year);
+        
+        this.#batteryCapacity = batteryCapacity;
+        this.#currentCharge = batteryCapacity; // Start fully charged
+        this.type = 'Electric';
+    }
+    
+    // Override parent method
+    start() {
+        if (this.#currentCharge <= 0) {
+            return `${this.brand} ${this.model} needs charging!`;
+        }
+        // Call parent's start method
+        return super.start() + " (Silent mode 🔇)";
+    }
+    
+    // New method specific to electric vehicles
+    charge(amount) {
+        this.#currentCharge = Math.min(
+            this.#currentCharge + amount,
+            this.#batteryCapacity
+        );
+        return `Charged to ${this.chargePercentage}%`;
+    }
+    
+    // Getter for battery status
+    get chargePercentage() {
+        return Math.round((this.#currentCharge / this.#batteryCapacity) * 100);
+    }
+    
+    drive(distance) {
+        const energyNeeded = distance * 0.3; // 0.3 kWh per mile
+        if (energyNeeded > this.#currentCharge) {
+            return "Not enough charge for this trip!";
+        }
+        this.#currentCharge -= energyNeeded;
+        return `Drove ${distance} miles. Battery at ${this.chargePercentage}%`;
+    }
+}
+
+// Even more specific class
+class Tesla extends ElectricVehicle {
+    constructor(model, year, batteryCapacity) {
+        super('Tesla', model, year, batteryCapacity);
+        this.autopilotEnabled = false;
+    }
+    
+    enableAutopilot() {
+        this.autopilotEnabled = true;
+        return "Autopilot engaged! 🚗🤖";
+    }
+}
+
+// Create instances
+const regularCar = new Vehicle('Toyota', 'Camry', 2020);
+const electricCar = new ElectricVehicle('Nissan', 'Leaf', 2022, 62);
+const myTesla = new Tesla('Model 3', 2023, 75);
+
+// Test inheritance chain
+console.log(regularCar.start());     // "Toyota Camry started!"
+console.log(electricCar.start());    // "Nissan Leaf started! (Silent mode 🔇)"
+console.log(myTesla.start());        // "Tesla Model 3 started! (Silent mode 🔇)"
+
+// Tesla has all methods from its parents
+console.log(myTesla.getAge());       // Age from Vehicle
+console.log(myTesla.drive(50));      // Drive from ElectricVehicle  
+console.log(myTesla.enableAutopilot()); // Its own method
+
+// Type checking with instanceof
+console.log('\nType Checking:');
+console.log(myTesla instanceof Tesla);           // true
+console.log(myTesla instanceof ElectricVehicle); // true
+console.log(myTesla instanceof Vehicle);         // true
+console.log(myTesla instanceof Object);          // true (everything is an Object)
+
+console.log(regularCar instanceof ElectricVehicle); // false
+console.log(electricCar instanceof Tesla);          // false
+
+// Checking constructor
+console.log(myTesla.constructor.name);  // "Tesla"
+```
+
+**🎯 Inheritance Rules:**
+1. Child classes MUST call `super()` before using `this`
+2. Child can override parent methods
+3. Child can call parent methods with `super.methodName()`
+4. Private fields are NOT inherited (truly private!)
+5. Static methods ARE inherited
+
+### 5. Mastering `this` with bind, call, and apply 🎯
+
+**Analogy:** Think of `this` as a pronoun in a sentence. "I am hungry" - who is "I"? It depends on who's speaking! Similarly, `this` depends on how a function is called.
+
+```javascript
+// this-mastery.js
+
+// The problem: 'this' can be confusing!
+const user = {
+    name: 'Alice',
+    greet() {
+        console.log(`Hello, I'm ${this.name}`);
+    },
+    greetDelayed() {
+        // Problem: setTimeout changes 'this' context
+        setTimeout(function() {
+            console.log(`Delayed: I'm ${this.name}`); // undefined!
+        }, 1000);
+    }
+};
+
+user.greet();  // Works: "Hello, I'm Alice"
+
+// But if we extract the method...
+const greetFunction = user.greet;
+greetFunction();  // Broken: "Hello, I'm undefined"
+
+// SOLUTION 1: bind() - Creates a new function with fixed 'this'
+const boundGreet = user.greet.bind(user);
+boundGreet();  // Works: "Hello, I'm Alice"
+
+// Real-world bind() example: Event handlers
+class Button {
+    constructor(label) {
+        this.label = label;
+        this.clickCount = 0;
+    }
+    
+    handleClick() {
+        this.clickCount++;
+        console.log(`${this.label} clicked ${this.clickCount} times`);
+    }
+    
+    attachToElement(element) {
+        // Without bind, 'this' would be the DOM element
+        element.addEventListener('click', this.handleClick.bind(this));
+    }
+}
+
+// SOLUTION 2: call() - Invoke function with specific 'this' RIGHT NOW
+function describe(age, occupation) {
+    console.log(`${this.name} is ${age} years old and works as ${occupation}`);
+}
+
+const person1 = { name: 'Bob' };
+const person2 = { name: 'Carol' };
+
+describe.call(person1, 25, 'Developer');
+// "Bob is 25 years old and works as Developer"
+
+describe.call(person2, 30, 'Designer');
+// "Carol is 30 years old and works as Designer"
+
+// SOLUTION 3: apply() - Like call(), but arguments as array
+const numbers = [5, 6, 2, 3, 7];
+
+// Using apply to pass array as arguments
+const max = Math.max.apply(null, numbers);
+console.log(`Max: ${max}`);  // 7
+
+// Modern alternative: spread operator
+const max2 = Math.max(...numbers);
+
+// Practical apply() example: Borrowing methods
+const fakeArray = {
+    0: 'first',
+    1: 'second',
+    2: 'third',
+    length: 3
+};
+
+// Borrow Array's join method
+const joined = Array.prototype.join.call(fakeArray, ' - ');
+console.log(joined);  // "first - second - third"
+
+// COMPREHENSIVE EXAMPLE: Restaurant ordering system
+class Restaurant {
+    constructor(name) {
+        this.name = name;
+        this.orders = [];
+    }
+    
+    takeOrder(customerName, ...items) {
+        const order = {
+            customer: customerName,
+            items: items,
+            timestamp: new Date(),
+            restaurant: this.name
+        };
+        this.orders.push(order);
+        console.log(`Order placed at ${this.name} for ${customerName}`);
+        return order;
+    }
+}
+
+const italianPlace = new Restaurant("Luigi's");
+const sushiPlace = new Restaurant("Sakura");
+
+// Normal call
+italianPlace.takeOrder("Alice", "Pizza", "Salad");
+
+// Using call to place order at different restaurant
+italianPlace.takeOrder.call(sushiPlace, "Bob", "Sushi", "Miso Soup");
+
+// Using apply with array of items
+const bigOrder = ["Customer123", "Roll1", "Roll2", "Roll3", "Sake"];
+italianPlace.takeOrder.apply(sushiPlace, bigOrder);
+
+// Using bind for recurring customer
+const orderAtLuigis = italianPlace.takeOrder.bind(italianPlace, "Regular Joe");
+orderAtLuigis("Daily Special");  // Always orders as "Regular Joe" at Luigi's
+orderAtLuigis("Coffee");
+
+console.log("\nOrders at Luigi's:", italianPlace.orders.length);
+console.log("Orders at Sakura:", sushiPlace.orders.length);
+```
+
+**📊 Quick Reference Table:**
+
+| Method | When to Use | Syntax | Returns |
+|--------|-------------|--------|----------|
+| `bind()` | Create reusable function with fixed `this` | `func.bind(thisArg, arg1, arg2)` | New function |
+| `call()` | Invoke function once with specific `this` | `func.call(thisArg, arg1, arg2)` | Function result |
+| `apply()` | Invoke function with `this` and array args | `func.apply(thisArg, [args])` | Function result |
+
+**🚨 Common Pitfall:**
+```javascript
+// Arrow functions don't have their own 'this'
+const obj = {
+    name: 'MyObject',
+    regularMethod: function() {
+        return this.name;  // Works
+    },
+    arrowMethod: () => {
+        return this.name;  // Doesn't work as expected!
+    }
+};
+```
+
+### 6. Factory Functions: The Simple Alternative 🏭
+
+**Analogy:** If classes are like car manufacturing plants with complex machinery, factory functions are like a craftsman's workshop—simpler, more flexible, and often all you need!
+
+```javascript
+// factory-functions-complete.js
+
+// Simple factory function
+function createUser(name, email) {
+    // Private data (via closure)
+    let loginCount = 0;
+    let lastLogin = null;
+    
+    // Public interface
+    return {
+        name,  // Shorthand for name: name
+        email,
+        
+        login() {
+            loginCount++;
+            lastLogin = new Date();
+            console.log(`${name} logged in (Total: ${loginCount} times)`);
+        },
+        
+        getStats() {
+            return {
+                loginCount,
+                lastLogin: lastLogin ? lastLogin.toLocaleString() : 'Never'
+            };
+        },
+        
+        // Method that returns another factory object!
+        createSession() {
+            return createSession(this);
+        }
+    };
+}
+
+// Factory with composition (mixing features)
+function createSession(user) {
+    const sessionId = Math.random().toString(36).substr(2, 9);
+    const startTime = Date.now();
+    
+    return {
+        sessionId,
+        user: user.name,
+        
+        getDuration() {
+            return Math.floor((Date.now() - startTime) / 1000) + ' seconds';
+        },
+        
+        end() {
+            console.log(`Session ${sessionId} ended after ${this.getDuration()}`);
+        }
+    };
+}
+
+// Advanced factory: Game character with composition
+function createCharacter(name, characterClass) {
+    // Private state
+    let health = 100;
+    let mana = 50;
+    let level = 1;
+    let experience = 0;
+    
+    // Abilities based on class
+    const abilities = getAbilitiesForClass(characterClass);
+    
+    // Public interface
+    const character = {
+        name,
+        characterClass,
+        
+        // Getters using closures
+        getHealth: () => health,
+        getMana: () => mana,
+        getLevel: () => level,
+        
+        takeDamage(amount) {
+            health = Math.max(0, health - amount);
+            console.log(`${name} takes ${amount} damage! Health: ${health}`);
+            if (health === 0) {
+                console.log(`${name} has been defeated! 💀`);
+            }
+        },
+        
+        heal(amount) {
+            const oldHealth = health;
+            health = Math.min(100, health + amount);
+            console.log(`${name} healed for ${health - oldHealth}. Health: ${health}`);
+        },
+        
+        gainExperience(amount) {
+            experience += amount;
+            console.log(`${name} gained ${amount} XP`);
+            
+            // Level up logic
+            while (experience >= level * 100) {
+                experience -= level * 100;
+                level++;
+                health = 100;  // Full heal on level up
+                mana = 50 + (level * 10);
+                console.log(`🎉 LEVEL UP! ${name} is now level ${level}!`);
+            }
+        },
+        
+        // Compose abilities into the character
+        ...abilities
+    };
+    
+    return character;
+}
+
+// Helper function for abilities
+function getAbilitiesForClass(characterClass) {
+    const abilities = {
+        warrior: {
+            slash() {
+                console.log(`⚔️ Warrior slashes for 20 damage!`);
+                return 20;
+            },
+            shieldBlock() {
+                console.log(`🛡️ Warrior blocks incoming damage!`);
+                return 10;
+            }
+        },
+        mage: {
+            fireball() {
+                console.log(`🔥 Mage casts Fireball for 30 damage!`);
+                return 30;
+            },
+            iceShield() {
+                console.log(`❄️ Mage creates Ice Shield!`);
+                return 15;
+            }
+        },
+        rogue: {
+            stealth() {
+                console.log(`🌑 Rogue enters stealth mode!`);
+                return true;
+            },
+            backstab() {
+                console.log(`🗡️ Rogue backstabs for 25 damage!`);
+                return 25;
+            }
+        }
+    };
+    
+    return abilities[characterClass] || {};
+}
+
+// Using the factories
+console.log('=== Factory Functions Demo ===\n');
+
+// User factory
+const user1 = createUser('Alice', 'alice@example.com');
+const user2 = createUser('Bob', 'bob@example.com');
+
+user1.login();
+user1.login();
+console.log(user1.getStats());
+
+const session = user1.createSession();
+setTimeout(() => session.end(), 1000);
+
+// Game character factory
+console.log('\n=== Game Characters ===\n');
+
+const warrior = createCharacter('Thorin', 'warrior');
+const mage = createCharacter('Gandalf', 'mage');
+
+warrior.slash();
+warrior.takeDamage(30);
+warrior.heal(20);
+warrior.gainExperience(150);
+
+mage.fireball();
+mage.iceShield();
+
+console.log(`\nThorin's health: ${warrior.getHealth()}`);
+console.log(`Gandalf's mana: ${mage.getMana()}`);
+```
+
+**🔍 Factory vs Class Comparison:**
+
+```javascript
+// CLASS APPROACH
+class UserClass {
+    #password;  // Private
+    
+    constructor(name, password) {
+        this.name = name;
+        this.#password = password;
+    }
+    
+    checkPassword(attempt) {
+        return attempt === this.#password;
+    }
+}
+
+// FACTORY APPROACH  
+function createUserFactory(name, password) {
+    // password is private via closure
+    return {
+        name,
+        checkPassword(attempt) {
+            return attempt === password;
+        }
+    };
+}
+
+// Both work, but factory is simpler!
+const classUser = new UserClass('Alice', 'secret123');
+const factoryUser = createUserFactory('Bob', 'secret456');
+```
+
+**📊 When to Use Each:**
+
+| Use Classes When... | Use Factories When... |
+|--------------------|-----------------------|
+| You need inheritance | You want simple objects |
+| You need `instanceof` checks | You prefer functional programming |
+| Working with frameworks expecting classes | You want true privacy via closures |
+| Performance with many instances matters | You want to avoid `this` confusion |
+| You like OOP style | You want more flexibility |
 
 ## Exercises
 

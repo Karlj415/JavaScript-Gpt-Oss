@@ -1,85 +1,266 @@
+// =============================================================================
+// 🎯 PRACTICE DRILLS - Secure Auth & API Hardening
+// =============================================================================
+
 /*
-## Practice Drills
-1. Implement signup (`/auth/register`) and login (`/auth/login`) endpoints. On successful login, return both an access token (expires in 15 minutes) and a refresh token (expires in 7 days).
-2. Create an authentication middleware that verifies the access token. Protect a new `/profile` route with it. If the token is missing or invalid, return a `401 Unauthorized` error.
-3. Add the `express-rate-limit` middleware to the `/auth/login` route to prevent brute-force attacks (e.g., max 5 requests per minute).
-4. Outline the database schema and API endpoints you would need to implement a secure password reset feature. Consider token storage, expiration, and how to prevent token reuse.
+📝 DRILL 1: SIGNUP & LOGIN (FOUNDATIONS)
+Objective: Build secure registration and login endpoints
+
+What You'll Learn:
+- Password hashing and verification
+- Basic auth flows with clear error handling
+- Safe response design (no secret leakage)
+
+Tasks:
+1) POST /auth/register
+   - Validate body: { email, username, password }
+   - Hash password with bcrypt (>=12 rounds)
+   - Store user with role = STUDENT (default)
+   - Return 201 with public fields only
+
+2) POST /auth/login
+   - Validate body: { email, password }
+   - Verify password
+   - Issue accessToken (15m) and refreshToken (7d)
+   - Store refreshToken as httpOnly, secure cookie (path=/auth)
+   - Return 200 with { accessToken }
+
+3) Security Notes
+   - On invalid credentials, always send generic message
+   - Do not reveal if email exists
+   - Rate limit /auth/login (e.g., 5/min per IP)
 */
 
 /*
-## Project: Secure Learning Tracker API
+📝 DRILL 2: AUTHENTICATION MIDDLEWARE & PROTECTED ROUTES
+Objective: Protect endpoints using access tokens
 
-**Objective:** Extend the Learning Tracker API with a complete, secure authentication and authorization system using JWTs and the refresh token pattern.
+What You'll Learn:
+- Bearer token parsing
+- Centralized 401 handling
+- Attaching user to req
 
-**Instructions:**
-1.  **Dependencies:**
-    -   Install `bcrypt`, `jsonwebtoken`, `express-rate-limit`, `helmet`, and `cors`.
+Tasks:
+1) Middleware authenticate
+   - Parse Authorization: Bearer <token>
+   - Verify with JWT_ACCESS_SECRET
+   - Attach req.user = { id, roles }
 
-2.  **User Model:**
-    -   Update your `schema.prisma` to include a `User` model.
-    -   It must have `email` (unique), `password` (will store the hash), and `role` (e.g., an enum of `STUDENT`, `INSTRUCTOR`, `ADMIN`).
-    -   Also add a `RefreshToken` model to securely store issued refresh tokens and associate them with a user.
+2) GET /profile
+   - Return the authenticated user's profile
+   - 401 on missing/invalid token
 
-3.  **Authentication Routes (`/auth`):**
-    -   `POST /auth/register`: Hash the incoming password with `bcrypt` and create a new user.
-    -   `POST /auth/login`: Find the user, compare the password with `bcrypt.compare()`. If valid, generate and return a short-lived **access token** and a long-lived **refresh token**. Store the refresh token in your database.
-    -   `POST /auth/refresh`: Accept a refresh token. Validate it against the database. If valid, issue a new access token.
-    -   `POST /auth/logout`: Invalidate the provided refresh token in the database.
+3) Logging
+   - Log auth failures with ip and userAgent (no secrets)
+*/
 
-4.  **Middleware:**
-    -   **Authentication (`auth.middleware.js`):** Create a middleware that reads the `Authorization: Bearer <token>` header, verifies the access token using `jsonwebtoken`, finds the user in the database, and attaches the user object to `req.user`.
-    -   **Authorization:** Create a middleware `authorize(roles)` that checks if `req.user.role` is in the allowed `roles` array.
-    -   **Security Stack:** In `app.js`, apply `helmet()`, `cors()`, and rate limiting to your application or specific routes.
+/*
+📝 DRILL 3: REFRESH TOKENS & ROTATION
+Objective: Implement refresh flow safely
 
-5.  **Protect Routes:**
-    -   Apply the authentication middleware to all routes except `/auth`.
-    -   Apply the authorization middleware to specific routes. For example, only an `INSTRUCTOR` or `ADMIN` should be able to create a new track (`POST /api/tracks`).
+What You'll Learn:
+- Refresh token verification
+- Token rotation best practices
+- Revocation lists (blacklist/whitelist)
 
-6.  **Testing:**
-    -   Write integration tests for the login flow.
-    -   Write a test for a protected endpoint, first without a token (expect 401), then with a valid token (expect 200).
-    -   Write a test to ensure a `STUDENT` cannot access an `INSTRUCTOR`-only route (expect 403).
+Tasks:
+1) POST /auth/refresh
+   - Read refreshToken from cookie
+   - Verify with JWT_REFRESH_SECRET
+   - Optional: persist refresh tokens with unique id (jti)
+   - Rotate: issue new refresh token, invalidate old
+   - Return new accessToken
+
+2) POST /auth/logout
+   - Invalidate refresh token (delete/revoke)
+   - Clear cookie
+   - Return 204
+
+3) Optional Advanced
+   - Track deviceId / lastUsedAt for each refresh token
+   - Allow selective logout per device
+*/
+
+/*
+📝 DRILL 4: AUTHORIZATION (RBAC)
+Objective: Gate actions based on roles
+
+What You'll Learn:
+- Role checks
+- Resource ownership checks (optional)
+
+Tasks:
+1) authorize(...roles)
+   - Return 403 if req.user.roles has no intersection
+
+2) Apply to routes
+   - POST /api/tracks → INSTRUCTOR or ADMIN only
+   - DELETE /api/tracks/:id → ADMIN or track owner
+
+3) Tests
+   - Student forbidden to create tracks (403)
+   - Instructor allowed (201)
+*/
+
+/*
+📝 DRILL 5: HARDENING CHECKLIST
+Objective: Add essential safeguards to your server
+
+What You'll Learn:
+- Practical security middleware
+- Input validation
+- CORS and cookie safety
+
+Tasks:
+- Add helmet()
+- Configure CORS with origin allowlist and credentials
+- Add express-rate-limit to /auth routes
+- Enforce JSON body size limits
+- Validate inputs (Joi/Zod) for all auth routes
+- Set cookie flags: httpOnly, secure, sameSite=strict
+*/
+
+/*
+📝 DRILL 6: TESTING AUTH FLOWS WITH SUPERTEST
+Objective: Write end-to-end tests for auth
+
+What You'll Learn:
+- Testing login/refresh/authorization
+- Using cookies in tests
+
+Tasks:
+- Test /auth/login: success + failure
+- Test protected route: 401 without token, 200 with token
+- Test refresh flow: expired access → refresh → new access
+- Test RBAC: student forbidden on instructor route
+*/
+
+// =============================================================================
+// 🎨 PROJECT: Secure Learning Tracker API
+// =============================================================================
+
+/*
+🎯 GOAL
+Upgrade the Lesson 17/18 API to production-grade security with complete authentication, authorization, and hardening.
+
+🔩 STACK
+- bcryptjs for password hashing
+- jsonwebtoken for access/refresh tokens
+- helmet for security headers
+- express-rate-limit for brute-force protection
+- cors for controlled cross-origin access
+
+📁 STEP 1: PRISMA SCHEMA
+
+```prisma
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+}
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  deviceId   String?
+  createdAt  DateTime @default(now())
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  
+  @@index([userId])
+}
+```
+
+Run migrations and generate client.
+
+📦 STEP 2: ROUTES
+
+- POST /auth/register → Create user (hash password)
+- POST /auth/login → Issue access + refresh token (cookie)
+- POST /auth/refresh → Rotate refresh token, new access token
+- POST /auth/logout → Revoke refresh token, clear cookie
+- GET /profile → Authenticated user info
+- POST /api/tracks → Auth + authorize(INSTRUCTOR, ADMIN)
+
+🧱 STEP 3: MIDDLEWARE
+
+- authenticate: Verify access token (Authorization: Bearer)
+- authorize(...roles): RBAC check
+- request limiter: /auth routes stricter
+- helmet + cors: app-level security
+
+🧪 STEP 4: TESTS (Supertest + Vitest)
+
+- Register + Login happy path
+- Login failure (wrong password)
+- Access protected route (401 → then 200 with token)
+- Refresh flow returns new access token
+- RBAC: STUDENT forbidden to create track (403)
+
+📜 STEP 5: ENV & SECRETS
+
+Add to .env (do not commit secrets):
+```
+JWT_ACCESS_SECRET=replace-with-strong-secret
+JWT_REFRESH_SECRET=replace-with-strong-secret
+ACCESS_TTL=15m
+REFRESH_TTL=7d
+COOKIE_DOMAIN=localhost
+```
+
+🧯 STEP 6: HARDENING
+- Set cookie flags: httpOnly, secure, sameSite=strict
+- Limit JSON body size: app.use(express.json({ limit: '10kb' }))
+- Normalize error responses (no stack traces in prod)
+- Log auth events without exposing secrets
+- Consider refresh token rotation + database revocation
+
+📌 DELIVERABLES
+- Updated schema and migration
+- Working auth routes and middleware
+- Hardened app configuration
+- Passing auth tests
 */
 
 // --- Starter Code (src/api/auth/auth.middleware.js) ---
 /*
 import jwt from 'jsonwebtoken';
-import { prisma } from '../../db.js'; // Assuming you have a prisma client export
+import { prisma } from '../../db.js';
 
 export const authenticate = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'No token provided or malformed header' });
-  }
-
-  const token = authHeader.split(' ')[1];
+  const authHeader = req.headers.authorization || '';
+  const [, token] = authHeader.split(' ');
+  if (!token) return res.status(401).json({ error: 'Missing bearer token' });
 
   try {
-    // TODO: Verify the token using jwt.verify and your JWT_SECRET
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-
-    // TODO: Find the user in the database based on the decoded payload (e.g., userId)
-    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
-
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    // TODO: Attach the user object to the request
-    req.user = user;
+    const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    req.user = { id: user.id, role: user.role };
     next();
   } catch (error) {
-    // This will catch expired tokens, invalid signatures, etc.
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
 
-export const authorize = (allowedRoles) => {
-  return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Forbidden: You do not have the required role' });
-    }
-    next();
-  };
+export const authorize = (allowedRoles) => (req, res, next) => {
+  if (!req.user || !allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
 };
 */

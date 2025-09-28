@@ -1,107 +1,267 @@
-# Lesson 19 · Authentication and Security
+# Lesson 19 · Authentication and Security for Express APIs
 
-Security is non-negotiable. Today I’ll teach you how to authenticate users, authorize actions, and defend your applications against common attacks using modern, battle-tested patterns.
+> First protect the humans, then protect the data. 🔐  
+> In this lesson, you’ll build bulletproof auth and security foundations for production APIs.
 
-## Objectives
-- Distinguish between Authentication (AuthN) and Authorization (AuthZ).
-- Implement secure password handling using `bcrypt`.
-- Issue and verify JWTs, including the Access Token / Refresh Token pattern.
-- Understand the security trade-offs of storing tokens (Cookies vs. Local Storage).
-- Protect routes with authentication and authorization middleware.
-- Mitigate common vulnerabilities by explaining CORS and using security headers.
+## Table of Contents
+- [🎯 What You'll Master](#-what-youll-master)
+- [🧭 AuthN vs AuthZ: Know the Difference](#-authn-vs-authz-know-the-difference)
+- [🔑 Password Security: Hashing Done Right](#-password-security-hashing-done-right)
+- [🎟️ JWTs and Sessions: Patterns that Scale](#️-jwts-and-sessions-patterns-that-scale)
+- [🧰 Implementing Secure Auth in Express](#-implementing-secure-auth-in-express)
+- [🛡️ Authorization: RBAC and beyond](#️-authorization-rbac-and-beyond)
+- [🌐 CORS, Cookies, CSRF: Web Security Basics](#-cors-cookies-csrf-web-security-basics)
+- [🧼 Input Validation and Sanitization](#-input-validation-and-sanitization)
+- [🪖 Security Hardening for Production](#-security-hardening-for-production)
 
-## Lesson Narrative
+## 🎯 What You'll Master
+- Correctly hash passwords and store user credentials safely
+- Implement login with short-lived access tokens and refresh tokens
+- Choose safe storage strategies (secure cookies vs local storage)
+- Protect routes with authentication and role-based authorization
+- Harden APIs against common attacks (XSS, CSRF, brute-force, injection)
+- Apply security headers, CORS, rate limiting, and secret management
 
-### 1. Authentication vs. Authorization
-- **Authentication (AuthN):** "Who are you?" This is the process of verifying a user's identity, typically with a username and password. The outcome is a decision: authenticated or not.
-- **Authorization (AuthZ):** "What are you allowed to do?" This process happens *after* authentication. It checks if an authenticated user has permission to access a specific resource or perform an action.
+## 🧭 AuthN vs AuthZ: Know the Difference
 
-### 2. Secure Password Handling
-Never, ever store plaintext passwords. Passwords must be **hashed** and **salted**. A library like `bcrypt` does this for you automatically.
+- Authentication (AuthN) = Who are you?  
+- Authorization (AuthZ) = What are you allowed to do?  
 
-- **Hashing:** A one-way function that turns a password into a fixed-length, irreversible string.
-- **Salting:** `bcrypt` automatically generates a random salt for each password before hashing. This ensures that two identical passwords will result in two different hashes, preventing rainbow table attacks.
+Typical flow: Login → Get tokens → Access protected resources → Authorization checks per route.
+
+## 🔑 Password Security: Hashing Done Right
+
+Never store plaintext passwords. Use battle-tested libraries.
 
 ```javascript
-import bcrypt from "bcrypt";
-const saltRounds = 12; // A higher number is more secure but slower
+// Password hashing and verification
+import bcrypt from 'bcryptjs';
 
-// To hash a new password:
-const hashedPassword = await bcrypt.hash(plainTextPassword, saltRounds);
+const SALT_ROUNDS = 12; // Security/performance trade-off
 
-// To verify a login attempt:
-const isValid = await bcrypt.compare(loginPassword, hashedPassword);
+export async function hashPassword(plain) {
+  return bcrypt.hash(plain, SALT_ROUNDS);
+}
+
+export async function verifyPassword(plain, hash) {
+  return bcrypt.compare(plain, hash);
+}
 ```
 
-### 3. Stateless Authentication with JWTs
-JSON Web Tokens (JWTs) allow you to create authenticated sessions without storing session data on the server.
+Guidelines:
+- Minimum length (12+), block common passwords, require complexity only when needed
+- Always hash server-side before storage
+- Never log secrets or password hashes
+- Consider argon2 for stronger resistance when available
 
-#### The Refresh Token Pattern
-Storing a short-lived access token is good, but asking the user to log in every 15 minutes is a bad user experience. The standard solution is the **Access Token / Refresh Token** pattern.
+## 🎟️ JWTs and Sessions: Patterns that Scale
 
-1.  **Login:** User logs in. The server issues two tokens:
-    -   An **Access Token** (short-lived, e.g., 15 minutes). This is sent with every API request.
-    -   A **Refresh Token** (long-lived, e.g., 7 days). This is stored securely (e.g., in an HTTP-only cookie) and is used only to get a new access token.
-2.  **API Request:** The client sends the Access Token in the `Authorization` header.
-3.  **Token Expiration:** When the Access Token expires, the API returns a `401 Unauthorized` error.
-4.  **Token Refresh:** The client detects the 401, sends its Refresh Token to a special `/auth/refresh` endpoint. The server validates the refresh token and, if valid, issues a new Access Token.
+JWTs (JSON Web Tokens) enable stateless auth. Typical pattern:
+- Access Token: short-lived (e.g., 15m). Sent in Authorization: Bearer <token>
+- Refresh Token: long-lived (e.g., 7–30d). Stored securely, exchanged for new access tokens
 
-#### Storing JWTs: Cookies vs. Local Storage
-- **HTTP-Only Cookies:** The token is stored in a cookie that cannot be accessed by client-side JavaScript. This makes it immune to XSS attacks where a script tries to steal the token. However, it can be vulnerable to Cross-Site Request Forgery (CSRF) attacks, which requires you to implement CSRF protection.
-- **Local Storage:** The token is stored in the browser's local storage. This is easy to implement but is vulnerable to XSS attacks. If a malicious script runs on your site, it can read and steal the token.
+Token storage options:
+- HTTP-only Secure Cookies (recommended for web apps)
+  - Pros: Not accessible to JS (mitigates XSS token theft)
+  - Cons: Requires CSRF protections
+- Bearer tokens in memory/localStorage
+  - Pros: Simpler client-handling
+  - Cons: Vulnerable to XSS if stored in localStorage
 
-**Recommendation:** For web applications, secure, HTTP-only cookies are generally the preferred method for storing refresh tokens.
+JWT claims you’ll commonly include:
+- sub (subject: user id), iat (issued at), exp (expiry), scope/roles
 
-### 4. Authorization Middleware
-Authorization middleware runs after authentication and checks if the authenticated user has the required permissions.
+## 🧰 Implementing Secure Auth in Express
 
 ```javascript
-// Middleware to check for required roles
-export const authorize = (allowedRoles) => {
-  return (req, res, next) => {
-    // Assumes a previous middleware has attached the user object to req
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-    next();
-  };
+// auth.service.js - issuing and verifying tokens
+import jwt from 'jsonwebtoken';
+
+const ACCESS_TTL = '15m';
+const REFRESH_TTL = '7d';
+
+export function signAccessToken(payload) {
+  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, { expiresIn: ACCESS_TTL });
+}
+
+export function signRefreshToken(payload) {
+  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_TTL });
+}
+
+export function verifyAccessToken(token) {
+  return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+}
+
+export function verifyRefreshToken(token) {
+  return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+}
+```
+
+```javascript
+// auth.middleware.js - authenticate requests
+export function authenticate(req, res, next) {
+  const header = req.headers.authorization || '';
+  const [, token] = header.split(' ');
+  if (!token) return res.status(401).json({ error: 'Missing bearer token' });
+  
+  try {
+    const decoded = verifyAccessToken(token);
+    req.user = { id: decoded.sub, roles: decoded.roles || [] };
+    return next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+```
+
+```javascript
+// auth.routes.js - register, login, refresh, logout (outline)
+import express from 'express';
+import { hashPassword, verifyPassword } from './password.js';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from './auth.service.js';
+import { prisma } from '../db.js';
+
+const router = express.Router();
+
+router.post('/register', async (req, res) => {
+  const { email, password, username } = req.body;
+  const hash = await hashPassword(password);
+  const user = await prisma.user.create({ data: { email, username, password: hash, role: 'STUDENT' } });
+  res.status(201).json({ id: user.id, email: user.email, username: user.username });
+});
+
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  const ok = await verifyPassword(password, user.password);
+  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+  
+  const access = signAccessToken({ sub: user.id, roles: [user.role] });
+  const refresh = signRefreshToken({ sub: user.id });
+  
+  // Option A: cookie storage (recommended for web)
+  res.cookie('refreshToken', refresh, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+  
+  res.json({ accessToken: access });
+});
+
+router.post('/refresh', async (req, res) => {
+  const token = req.cookies?.refreshToken;
+  if (!token) return res.status(401).json({ error: 'Missing refresh token' });
+  
+  try {
+    const decoded = verifyRefreshToken(token);
+    const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    
+    // Optional: rotation + persistence (invalidate old token id)
+    const access = signAccessToken({ sub: user.id, roles: [user.role] });
+    return res.json({ accessToken: access });
+  } catch {
+    return res.status(401).json({ error: 'Invalid refresh token' });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('refreshToken', { path: '/auth' });
+  res.status(204).end();
+});
+
+export default router;
+```
+
+## 🛡️ Authorization: RBAC and beyond
+
+- Role-Based Access Control (RBAC): roles like STUDENT, INSTRUCTOR, ADMIN
+- Attribute/Policy-based (ABAC/PBAC): decisions based on resource ownership, context, or claims
+
+```javascript
+// authorize.js - RBAC middleware
+export const authorize = (...allowed) => (req, res, next) => {
+  const roles = req.user?.roles || [];
+  const permitted = roles.some(r => allowed.includes(r));
+  if (!permitted) return res.status(403).json({ error: 'Forbidden' });
+  next();
 };
 
-// Usage in a router
-router.post('/tracks', authenticate, authorize(['ADMIN', 'INSTRUCTOR']), tracksController.create);
+// Example usage
+router.post('/tracks', authenticate, authorize('ADMIN', 'INSTRUCTOR'), createTrack);
 ```
 
-### 5. Understanding CORS
-**C**ross-**O**rigin **R**esource **S**haring is a browser security feature that blocks a web page from making requests to a different domain than the one that served the page. The `cors` Express middleware adds HTTP headers to your server's response that tell the browser it's okay to allow these cross-origin requests.
+## 🌐 CORS, Cookies, CSRF: Web Security Basics
+
+- CORS: Configure allowed origins, methods, and credentials
+- Cookies: Use httpOnly, secure, sameSite=strict
+- CSRF: For cookie-based auth, protect state-changing routes using CSRF tokens or sameSite=strict and double-submit patterns
 
 ```javascript
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
-// Allow requests from a specific origin
-app.use(cors({ origin: 'https://my-frontend-app.com' }));
+app.use(helmet());
+app.use(cors({ origin: ['https://app.example.com'], credentials: true }));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 ```
 
-### 6. Other Essential Defenses
-- **Helmet:** The `helmet` middleware adds various security-related HTTP headers to protect against common attacks like clickjacking and XSS.
-- **Rate Limiting:** Use `express-rate-limit` on authentication routes and other sensitive endpoints to prevent brute-force attacks.
-- **Input Validation:** Always validate and sanitize all user input on the server side, even if you have client-side validation.
+## 🧼 Input Validation and Sanitization
+
+Use a validation library (Joi/Zod) and centralize error handling.
+
+```javascript
+import joi from 'joi';
+
+const loginSchema = joi.object({
+  email: joi.string().email().required(),
+  password: joi.string().min(8).required()
+});
+
+export const validate = (schema) => (req, res, next) => {
+  const { error } = schema.validate(req.body, { abortEarly: false });
+  if (error) {
+    return res.status(422).json({ error: 'Validation failed', details: error.details.map(d => d.message) });
+  }
+  next();
+};
+```
+
+## 🪖 Security Hardening for Production
+
+- Secrets management: keep JWT secrets in environment variables; rotate regularly
+- Rate limit sensitive endpoints (`/auth/login`, `/auth/refresh`)
+- Enforce TLS/HTTPS; reject plaintext in production
+- Set security headers via Helmet; disable x-powered-by
+- Log auth events (login success/failure, token refresh, logout) without leaking secrets
+- Implement refresh token rotation and revocation list for compromised tokens
+- Monitor OWASP API Top 10: Broken Auth, Excessive Data Exposure, etc.
+
+---
 
 ## Exercises
-
-All practice drills and project instructions for this lesson can be found in the `exercises.js` file in this directory.
+All practice drills and project instructions for this lesson are in `exercises.js`.
 
 ## Watch These Videos
-- [Authentication Best Practices Overview (James Q Quick)](https://www.youtube.com/watch?v=iARfpJaaP8M)
-- [2021 OWASP Top Ten Overview (F5 DevCentral Community)](https://www.youtube.com/watch?v=uu7o6hEswVQ)
+- Authentication Best Practices Overview (James Q Quick)
+- 2021 OWASP Top Ten Overview (F5 DevCentral Community)
+- JWTs Explained (Fireship)  
+- OWASP API Top 10 (PortSwigger/OWASP)
 
 ## References
-- OWASP Cheat Sheet Series: [Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
-- Auth0 Docs: [JSON Web Tokens](https://auth0.com/docs/secure/tokens/json-web-tokens)
-- Node.js Security Checklist (by Snyk): [https://snyk.io/learn/node-js-security/](https://snyk.io/learn/node-js-security/)
+- OWASP Cheat Sheet: Authentication, Session Management, JWT, Password Storage
+- Auth0 Docs: JWT and Best Practices
+- Snyk: Node.js Security Checklist
 
 ## Reflection
-- What are the pros and cons of storing a JWT in local storage versus an HTTP-only cookie?
-- Why is the refresh token pattern necessary for a good user experience?
-- Explain the difference between a 401 Unauthorized and a 403 Forbidden response.
+- Cookies vs Local Storage: when and why?  
+- Why is refresh token rotation important?  
+- Difference between 401 vs 403 in practice?  
+- How would you implement token revocation?
 
-Lesson 20 wraps the course with real-time communication and deployment strategies.
+Next up: Lesson 20 adds real-time communication and deployment strategies.

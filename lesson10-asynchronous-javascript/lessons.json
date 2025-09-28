@@ -1,0 +1,96 @@
+[
+  {
+    "id": 1,
+    "title": "Introduction to JavaScript",
+    "description": "Learn the basics of JavaScript programming language",
+    "duration": 90,
+    "difficulty": "beginner",
+    "instructorId": 101,
+    "schedule": {
+      "day": "Monday",
+      "time": "9:00 AM",
+      "room": "A101"
+    },
+    "topics": [
+      "Variables and data types",
+      "Functions",
+      "Control structures"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Asynchronous JavaScript",
+    "description": "Master promises, async/await, and the event loop",
+    "duration": 120,
+    "difficulty": "intermediate",
+    "instructorId": 102,
+    "schedule": {
+      "day": "Tuesday",
+      "time": "2:00 PM",
+      "room": "B205"
+    },
+    "topics": [
+      "Callbacks and promises",
+      "async/await syntax",
+      "Event loop deep dive",
+      "Promise combinators"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "React Fundamentals",
+    "description": "Build modern user interfaces with React",
+    "duration": 150,
+    "difficulty": "intermediate",
+    "instructorId": 103,
+    "schedule": {
+      "day": "Wednesday",
+      "time": "10:00 AM",
+      "room": "C301"
+    },
+    "topics": [
+      "Components and JSX",
+      "Props and state",
+      "Event handling",
+      "Hooks introduction"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Node.js Basics",
+    "description": "Server-side JavaScript with Node.js",
+    "duration": 105,
+    "difficulty": "intermediate",
+    "instructorId": 101,
+    "schedule": {
+      "day": "Thursday",
+      "time": "1:00 PM",
+      "room": "A102"
+    },
+    "topics": [
+      "Node.js runtime",
+      "File system operations",
+      "HTTP servers",
+      "Package management"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Advanced CSS",
+    "description": "Modern CSS techniques and layouts",
+    "duration": 120,
+    "difficulty": "advanced",
+    "instructorId": 104,
+    "schedule": {
+      "day": "Friday",
+      "time": "11:00 AM",
+      "room": "D401"
+    },
+    "topics": [
+      "Flexbox and Grid",
+      "CSS animations",
+      "Responsive design",
+      "CSS custom properties"
+    ]
+  }
+]

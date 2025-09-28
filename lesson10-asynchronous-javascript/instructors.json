@@ -1,0 +1,78 @@
+[
+  {
+    "id": 101,
+    "name": "Dr. Sarah Chen",
+    "email": "sarah.chen@example.com",
+    "bio": "Full-stack developer with 8+ years of experience. Specializes in JavaScript, Node.js, and modern web frameworks.",
+    "expertise": [
+      "JavaScript",
+      "Node.js",
+      "React",
+      "Database Design"
+    ],
+    "rating": 4.9,
+    "avatar": "https://images.unsplash.com/photo-1494790108755-2616b332e234?w=150&h=150&fit=crop&crop=face",
+    "social": {
+      "github": "https://github.com/sarahchen",
+      "twitter": "@sarahdevs",
+      "linkedin": "https://linkedin.com/in/sarahchen"
+    }
+  },
+  {
+    "id": 102,
+    "name": "Alex Rodriguez",
+    "email": "alex.rodriguez@example.com",
+    "bio": "Senior software engineer and async JavaScript enthusiast. Loves teaching complex concepts in simple terms.",
+    "expertise": [
+      "Asynchronous Programming",
+      "JavaScript",
+      "Performance Optimization",
+      "Web APIs"
+    ],
+    "rating": 4.8,
+    "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    "social": {
+      "github": "https://github.com/alexdev",
+      "twitter": "@alexcodes",
+      "linkedin": "https://linkedin.com/in/alexrodriguez"
+    }
+  },
+  {
+    "id": 103,
+    "name": "Emily Watson",
+    "email": "emily.watson@example.com",
+    "bio": "React specialist and UI/UX enthusiast. Former Google engineer with expertise in building scalable applications.",
+    "expertise": [
+      "React",
+      "TypeScript",
+      "UI/UX Design",
+      "Component Architecture"
+    ],
+    "rating": 4.95,
+    "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    "social": {
+      "github": "https://github.com/emilywatson",
+      "twitter": "@emilybuilds",
+      "linkedin": "https://linkedin.com/in/emilywatson"
+    }
+  },
+  {
+    "id": 104,
+    "name": "Marcus Johnson",
+    "email": "marcus.johnson@example.com",
+    "bio": "CSS wizard and design systems architect. Passionate about creating beautiful, accessible web experiences.",
+    "expertise": [
+      "Advanced CSS",
+      "Design Systems",
+      "Accessibility",
+      "Animation"
+    ],
+    "rating": 4.7,
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
+    "social": {
+      "github": "https://github.com/marcusdesign",
+      "twitter": "@marcusstyles",
+      "linkedin": "https://linkedin.com/in/marcusjohnson"
+    }
+  }
+]

@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Lesson 20 Realtime Demo</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; }
+      #log { border: 1px solid #ccc; padding: 1rem; height: 240px; overflow: auto; }
+      input, button { font-size: 1rem; padding: 0.5rem; }
+    </style>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-E8cTUE1E5j2p9T6F3k7Qw0ztyo1g8LQ5tjbUjfD5v8bP3o8N2xq4gkK8Y9Wb32U1" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <h1>Lesson 20 Realtime Demo</h1>
+    <p>Status: <span id="status">disconnected</span></p>
+
+    <div>
+      <label>Room: <input id="room" value="general" /></label>
+      <button id="join">Join Room</button>
+    </div>
+
+    <div style="margin-top: 0.75rem;">
+      <label>Track ID: <input id="trackId" value="123" /></label>
+      <label>Lesson ID: <input id="lessonId" value="abc" /></label>
+      <label>User ID: <input id="userId" value="student-1" /></label>
+      <button id="joinClass">Join Class</button>
+      <button id="complete">Complete Lesson (emit progress)</button>
+    </div>
+
+    <div style="margin-top: 1rem;">
+      <input id="message" placeholder="Type a message" />
+      <button id="send">Send</button>
+    </div>
+
+    <h3>Log</h3>
+    <div id="log"></div>
+
+    <script>
+      const logEl = document.getElementById('log');
+      const statusEl = document.getElementById('status');
+      const roomEl = document.getElementById('room');
+      const msgEl = document.getElementById('message');
+      const trackEl = document.getElementById('trackId');
+      const lessonEl = document.getElementById('lessonId');
+      const userEl = document.getElementById('userId');
+
+      const socket = io('http://localhost:3001', { withCredentials: true });
+
+      function log(msg) {
+        const p = document.createElement('div');
+        p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logEl.appendChild(p);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      socket.on('connect', () => {
+        statusEl.textContent = `connected (${socket.id})`;
+        log(`connected as ${socket.id}`);
+      });
+
+      socket.on('disconnect', (reason) => {
+        statusEl.textContent = `disconnected (${reason})`;
+        log(`disconnected: ${reason}`);
+      });
+
+      socket.on('room:notice', (msg) => log(`ROOM: ${msg}`));
+      socket.on('chat:message', (payload) => log(`${payload.id}: ${payload.message}`));
+      socket.on('presence:join', (payload) => log(`PRESENCE: ${payload.userId} joined ${payload.room}`));
+      socket.on('progress:updated', (payload) => log(`PROGRESS: track ${payload.trackId} lesson ${payload.lessonId} => ${payload.percent}% (user ${payload.userId})`));
+
+      document.getElementById('join').onclick = () => {
+        const room = roomEl.value.trim() || 'general';
+        socket.emit('room:join', room);
+        log(`joined room ${room}`);
+      };
+
+      document.getElementById('joinClass').onclick = () => {
+        const trackId = trackEl.value.trim() || '123';
+        socket.emit('class:join', { trackId });
+        log(`joined class ${trackId}`);
+      };
+
+      document.getElementById('send').onclick = () => {
+        const room = roomEl.value.trim() || 'general';
+        const message = msgEl.value.trim();
+        if (!message) return;
+        socket.emit('chat:message', { room, message }, (ack) => {
+          if (ack && ack.ok) log('(delivered)');
+        });
+        msgEl.value = '';
+      };
+
+      document.getElementById('complete').onclick = async () => {
+        const trackId = trackEl.value.trim() || '123';
+        const lessonId = lessonEl.value.trim() || 'abc';
+        const userId = userEl.value.trim() || 'student-1';
+        try {
+          const res = await fetch(`http://localhost:3001/api/tracks/${trackId}/lessons/${lessonId}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+          });
+          const data = await res.json();
+          log(`completed via REST: ${JSON.stringify(data)}`);
+        } catch (err) {
+          log(`error completing lesson: ${err.message}`);
+        }
+      };
+    </script>
+  </body>
+</html>

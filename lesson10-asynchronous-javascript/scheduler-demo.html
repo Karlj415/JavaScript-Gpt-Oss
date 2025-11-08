@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -12,7 +12,7 @@
             padding: 20px;
             background: #f8fafc;
         }
-        
+
         .demo-header {
             text-align: center;
             background: white;
@@ -21,26 +21,26 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             margin-bottom: 24px;
         }
-        
+
         .demo-header h1 {
             margin: 0 0 12px 0;
             color: #1f2937;
             font-size: 2.5em;
         }
-        
+
         .demo-header p {
             color: #6b7280;
             font-size: 1.1em;
             margin: 0;
         }
-        
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        
+
+            .controls {
+                display: flex;
+                justify-content: center;
+                gap: 12px;
+                margin-bottom: 24px;
+            }
+
         .demo-info {
             background: #fef3c7;
             border: 1px solid #f59e0b;
@@ -48,25 +48,25 @@
             padding: 16px;
             margin-bottom: 24px;
         }
-        
+
         .demo-info h3 {
             margin: 0 0 8px 0;
             color: #92400e;
         }
-        
+
         .demo-info p {
             margin: 0;
             color: #78350f;
             line-height: 1.5;
         }
-        
-        .demo-info code {
-            background: rgba(0,0,0,0.1);
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-family: 'Monaco', 'Consolas', monospace;
-        }
-        
+
+            .demo-info code {
+                background: rgba(0, 0, 0, 0.1);
+                padding: 2px 4px;
+                border-radius: 3px;
+                font-family: "Monaco", "Consolas", monospace;
+            }
+
         #schedule-container {
             background: white;
             border-radius: 12px;
@@ -81,134 +81,166 @@
         <p>Async JavaScript in Action - Promise.allSettled, AbortController, and More!</p>
     </div>
 
-    <div class="demo-info">
-        <h3>📚 What This Demo Shows</h3>
-        <p>
-            This project demonstrates real-world asynchronous JavaScript patterns:
-            <strong>parallel data fetching</strong> with <code>Promise.allSettled</code>,
-            <strong>request cancellation</strong> with <code>AbortController</code>,
-            <strong>error handling</strong>, and <strong>data merging</strong>.
-            Open your browser's developer console to see detailed logging!
-        </p>
-    </div>
+        <div class="demo-info">
+            <h3>📚 What This Demo Shows</h3>
+            <p>
+                This project demonstrates real-world asynchronous JavaScript
+                patterns:
+                <strong>parallel data fetching</strong> with
+                <code>Promise.allSettled</code>,
+                <strong>request cancellation</strong> with
+                <code>AbortController</code>, <strong>error handling</strong>,
+                and <strong>data merging</strong>. Open your browser's developer
+                console to see detailed logging!
+            </p>
+        </div>
 
-    <div class="controls">
-        <button id="reload-btn">🔄 Reload Data</button>
-        <button id="abort-btn" disabled>❌ Cancel Request</button>
-    </div>
+        <div class="controls">
+            <button id="reload-btn">🔄 Reload Data</button>
+            <button id="abort-btn" disabled>❌ Cancel Request</button>
+        </div>
 
-    <div id="status" class="status">Initializing...</div>
-    
-    <div id="schedule-container">
-        <div id="schedule"></div>
-    </div>
+        <div id="status" class="status">Initializing...</div>
 
-    <script>
-        // This is a more focused version of the exercises.js project code
-        // for this HTML demo
-        
-        let currentController = null;
+        <div id="schedule-container">
+            <div id="schedule"></div>
+        </div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Lesson Scheduler Demo initialized');
-            
-            const statusDiv = document.querySelector('#status');
-            const scheduleContainer = document.querySelector('#schedule');
-            const abortButton = document.querySelector('#abort-btn');
-            const reloadButton = document.querySelector('#reload-btn');
+        <script>
+            // This is a more focused version of the exercises.js project code
+            // for this HTML demo
 
-            async function fetchScheduleData() {
-                currentController = new AbortController();
-                const { signal } = currentController;
-                
-                updateStatus('Loading schedule data...', 'loading');
-                enableAbortButton(true);
-                
-                try {
-                    console.log('📡 Starting parallel data fetch...');
-                    const startTime = Date.now();
-                    
-                    const [lessonsResult, instructorsResult] = await Promise.allSettled([
-                        fetch('./lessons.json', { signal }).then(response => {
-                            if (!response.ok) throw new Error(`Lessons API error: ${response.status}`);
-                            return response.json();
-                        }),
-                        fetch('./instructors.json', { signal }).then(response => {
-                            if (!response.ok) throw new Error(`Instructors API error: ${response.status}`);
-                            return response.json();
-                        })
-                    ]);
-                    
-                    const fetchTime = Date.now() - startTime;
-                    console.log(`⏱️ Data fetch completed in ${fetchTime}ms`);
-                    
-                    const lessons = processSettledResult(lessonsResult, 'lessons');
-                    const instructors = processSettledResult(instructorsResult, 'instructors');
-                    
-                    if (!lessons || !instructors) {
-                        throw new Error('Failed to load essential schedule data');
+            let currentController = null;
+
+            document.addEventListener("DOMContentLoaded", () => {
+                console.log("🚀 Lesson Scheduler Demo initialized");
+
+                const statusDiv = document.querySelector("#status");
+                const scheduleContainer = document.querySelector("#schedule");
+                const abortButton = document.querySelector("#abort-btn");
+                const reloadButton = document.querySelector("#reload-btn");
+
+                async function fetchScheduleData() {
+                    currentController = new AbortController();
+                    const { signal } = currentController;
+
+                    updateStatus("Loading schedule data...", "loading");
+                    enableAbortButton(true);
+
+                    try {
+                        console.log("📡 Starting parallel data fetch...");
+                        const startTime = Date.now();
+
+                        const [lessonsResult, instructorsResult] =
+                            await Promise.allSettled([
+                                fetch("./lessons.json", { signal }).then(
+                                    (response) => {
+                                        if (!response.ok)
+                                            throw new Error(
+                                                `Lessons API error: ${response.status}`,
+                                            );
+                                        return response.json();
+                                    },
+                                ),
+                                fetch("./instructors.json", { signal }).then(
+                                    (response) => {
+                                        if (!response.ok)
+                                            throw new Error(
+                                                `Instructors API error: ${response.status}`,
+                                            );
+                                        return response.json();
+                                    },
+                                ),
+                            ]);
+
+                        const fetchTime = Date.now() - startTime;
+                        console.log(
+                            `⏱️ Data fetch completed in ${fetchTime}ms`,
+                        );
+
+                        const lessons = processSettledResult(
+                            lessonsResult,
+                            "lessons",
+                        );
+                        const instructors = processSettledResult(
+                            instructorsResult,
+                            "instructors",
+                        );
+
+                        if (!lessons || !instructors) {
+                            throw new Error(
+                                "Failed to load essential schedule data",
+                            );
+                        }
+
+                        const mergedSchedule = mergeData(lessons, instructors);
+                        renderSchedule(mergedSchedule);
+                        updateStatus(
+                            `Successfully loaded ${mergedSchedule.length} lessons`,
+                            "success",
+                        );
+                    } catch (error) {
+                        handleFetchError(error);
+                    } finally {
+                        enableAbortButton(false);
+                        currentController = null;
                     }
-                    
-                    const mergedSchedule = mergeData(lessons, instructors);
-                    renderSchedule(mergedSchedule);
-                    updateStatus(`Successfully loaded ${mergedSchedule.length} lessons`, 'success');
-                    
-                } catch (error) {
-                    handleFetchError(error);
-                } finally {
-                    enableAbortButton(false);
-                    currentController = null;
                 }
-            }
 
-            function processSettledResult(result, dataType) {
-                if (result.status === 'fulfilled') {
-                    console.log(`✅ ${dataType} loaded successfully`);
-                    return result.value;
-                } else {
-                    console.error(`❌ Failed to load ${dataType}:`, result.reason.message);
-                    return null;
-                }
-            }
-
-            function handleFetchError(error) {
-                if (error.name === 'AbortError') {
-                    console.log('⛔ Request was cancelled by user');
-                    updateStatus('Request cancelled', 'cancelled');
-                } else {
-                    console.error('❌ Error:', error.message);
-                    updateStatus(`Error: ${error.message}`, 'error');
-                }
-            }
-
-            function mergeData(lessons, instructors) {
-                console.log('⚙️ Merging lesson and instructor data...');
-                
-                const instructorMap = new Map();
-                instructors.forEach(instructor => {
-                    instructorMap.set(instructor.id, instructor);
-                });
-                
-                return lessons.map(lesson => ({
-                    ...lesson,
-                    instructor: instructorMap.get(lesson.instructorId) || {
-                        name: 'Unknown Instructor',
-                        rating: 0
+                function processSettledResult(result, dataType) {
+                    if (result.status === "fulfilled") {
+                        console.log(`✅ ${dataType} loaded successfully`);
+                        return result.value;
+                    } else {
+                        console.error(
+                            `❌ Failed to load ${dataType}:`,
+                            result.reason.message,
+                        );
+                        return null;
                     }
-                }));
-            }
-
-            function renderSchedule(schedule) {
-                if (!schedule || schedule.length === 0) {
-                    scheduleContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #6b7280;">😅 No lessons found</div>';
-                    return;
                 }
 
-                const scheduleHTML = `
+                function handleFetchError(error) {
+                    if (error.name === "AbortError") {
+                        console.log("⛔ Request was cancelled by user");
+                        updateStatus("Request cancelled", "cancelled");
+                    } else {
+                        console.error("❌ Error:", error.message);
+                        updateStatus(`Error: ${error.message}`, "error");
+                    }
+                }
+
+                function mergeData(lessons, instructors) {
+                    console.log("⚙️ Merging lesson and instructor data...");
+
+                    const instructorMap = new Map();
+                    instructors.forEach((instructor) => {
+                        instructorMap.set(instructor.id, instructor);
+                    });
+
+                    return lessons.map((lesson) => ({
+                        ...lesson,
+                        instructor: instructorMap.get(lesson.instructorId) || {
+                            name: "Unknown Instructor",
+                            rating: 0,
+                        },
+                    }));
+                }
+
+                function renderSchedule(schedule) {
+                    if (!schedule || schedule.length === 0) {
+                        scheduleContainer.innerHTML =
+                            '<div style="padding: 40px; text-align: center; color: #6b7280;">😅 No lessons found</div>';
+                        return;
+                    }
+
+                    const scheduleHTML = `
                     <div style="padding: 20px;">
                         <h2 style="text-align: center; margin: 0 0 20px 0;">📅 Weekly Programming Schedule</h2>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
-                            ${schedule.map(lesson => `
+                            ${schedule
+                                .map(
+                                    (lesson) => `
                                 <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background: white;">
                                     <h3 style="margin: 0 0 8px 0; color: #1f2937;">${lesson.title}</h3>
                                     <p style="color: #6b7280; font-size: 0.9em; margin: 0 0 12px 0;">${lesson.description}</p>
@@ -224,51 +256,55 @@
                                         </div>
                                     </div>
                                 </div>
-                            `).join('')}
+                            `,
+                                )
+                                .join("")}
                         </div>
                         <div style="text-align: center; margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
                             <strong>📈 ${schedule.length} lessons • ${Math.round(schedule.reduce((sum, l) => sum + l.duration, 0) / 60)} total hours</strong>
                         </div>
                     </div>
                 `;
-                
-                scheduleContainer.innerHTML = scheduleHTML;
-                console.log('✅ Schedule rendered successfully');
-            }
 
-            function updateStatus(message, type = 'info') {
-                statusDiv.textContent = message;
-                statusDiv.className = `status status-${type}`;
-            }
-
-            function enableAbortButton(enabled) {
-                if (abortButton) {
-                    abortButton.disabled = !enabled;
-                    abortButton.textContent = enabled ? '❌ Cancel Request' : '❌ Cancel Request';
+                    scheduleContainer.innerHTML = scheduleHTML;
+                    console.log("✅ Schedule rendered successfully");
                 }
-            }
 
-            // Event listeners
-            if (abortButton) {
-                abortButton.addEventListener('click', () => {
-                    if (currentController) {
-                        console.log('⛔ User requested abort');
-                        currentController.abort();
+                function updateStatus(message, type = "info") {
+                    statusDiv.textContent = message;
+                    statusDiv.className = `status status-${type}`;
+                }
+
+                function enableAbortButton(enabled) {
+                    if (abortButton) {
+                        abortButton.disabled = !enabled;
+                        abortButton.textContent = enabled
+                            ? "❌ Cancel Request"
+                            : "❌ Cancel Request";
                     }
-                });
-            }
+                }
 
-            if (reloadButton) {
-                reloadButton.addEventListener('click', () => {
-                    console.log('🔄 User requested reload');
-                    scheduleContainer.innerHTML = '';
-                    fetchScheduleData();
-                });
-            }
+                // Event listeners
+                if (abortButton) {
+                    abortButton.addEventListener("click", () => {
+                        if (currentController) {
+                            console.log("⛔ User requested abort");
+                            currentController.abort();
+                        }
+                    });
+                }
 
-            // Initialize
-            fetchScheduleData();
-        });
-    </script>
-</body>
+                if (reloadButton) {
+                    reloadButton.addEventListener("click", () => {
+                        console.log("🔄 User requested reload");
+                        scheduleContainer.innerHTML = "";
+                        fetchScheduleData();
+                    });
+                }
+
+                // Initialize
+                fetchScheduleData();
+            });
+        </script>
+    </body>
 </html>

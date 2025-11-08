@@ -6,16 +6,14 @@
     "duration": 90,
     "difficulty": "beginner",
     "instructorId": 101,
+    "color": "#ff6b6b",
+    "italic": false,
     "schedule": {
       "day": "Monday",
       "time": "9:00 AM",
       "room": "A101"
     },
-    "topics": [
-      "Variables and data types",
-      "Functions",
-      "Control structures"
-    ]
+    "topics": ["Variables and data types", "Functions", "Control structures"]
   },
   {
     "id": 2,
@@ -24,6 +22,8 @@
     "duration": 120,
     "difficulty": "intermediate",
     "instructorId": 102,
+    "color": "#4ecdc4",
+    "italic": true,
     "schedule": {
       "day": "Tuesday",
       "time": "2:00 PM",
@@ -43,6 +43,8 @@
     "duration": 150,
     "difficulty": "intermediate",
     "instructorId": 103,
+    "color": "#45b7d1",
+    "italic": true,
     "schedule": {
       "day": "Wednesday",
       "time": "10:00 AM",
@@ -62,6 +64,8 @@
     "duration": 105,
     "difficulty": "intermediate",
     "instructorId": 101,
+    "color": "#f9ca24",
+    "italic": false,
     "schedule": {
       "day": "Thursday",
       "time": "1:00 PM",
@@ -81,6 +85,8 @@
     "duration": 120,
     "difficulty": "advanced",
     "instructorId": 104,
+    "color": "#6c5ce7",
+    "italic": true,
     "schedule": {
       "day": "Friday",
       "time": "11:00 AM",
